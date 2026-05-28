@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ここで待ってるよ</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #eff6ff 0%, #fefce8 100%);
+      color: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 430px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 0 0 14px;
+      color: #1d4ed8;
+      line-height: 1.3;
+    }
+
+    .message {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 20px;
+      font-size: 21px;
+      font-weight: 800;
+      line-height: 1.6;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      margin-bottom: 24px;
+    }
+
+    .main-button {
+      width: 100%;
+      height: 220px;
+      border: none;
+      border-radius: 36px;
+      background: #2563eb;
+      color: white;
+      font-size: 38px;
+      line-height: 1.25;
+      font-weight: 900;
+      box-shadow: 0 14px 28px rgba(37,99,235,0.35);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .main-button:active { transform: scale(0.98); }
+
+    .status {
+      margin-top: 22px;
+      min-height: 70px;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.5;
+      color: #1e3a8a;
+    }
+
+    .sub-button {
+      margin-top: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 18px;
+      padding: 15px;
+      font-size: 18px;
+      font-weight: 800;
+      background: #e0f2fe;
+      color: #075985;
+      cursor: pointer;
+    }
+
+    .small {
+      margin-top: 18px;
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>ここで待ってるよ</h1>
+
+    <div class="message">
+      待ち合わせ場所を<br>
+      相手に知らせたいときは<br>
+      下のボタンを押してください
+    </div>
+
+    <button class="main-button" onclick="shareMeetingLocation()">
+      📍<br>
+      ここで<br>
+      待ってるよ
+    </button>
+
+    <div id="status" class="status"></div>
+
+    <button class="sub-button" onclick="copyLastMessage()">
+      うまく送れない時はコピー
+    </button>
+
+    <div class="small">
+      位置情報をONにしてください。<br>
+      LINEで送る場合は、共有画面でLINEを選んでください。
+    </div>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    let lastShareText = "";
+
+    async function shareMeetingLocation() {
+      if (!navigator.geolocation) {
+        statusEl.innerHTML = "このスマホでは<br>位置情報が使えません";
+        return;
+      }
+
+      statusEl.innerHTML = "今いる場所を<br>確認しています…";
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = Math.round(pos.coords.accuracy || 0);
+          const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
+
+          lastShareText =
+`ここで待っています。
+この場所まで来てください。
+
+待ち合わせ場所：
+${mapUrl}
+
+GPSの誤差：約${accuracy}m`;
+
+          statusEl.innerHTML = "場所がわかりました。<br>送る相手を選んでください。";
+
+          if (navigator.share) {
+            try {
+              await navigator.share({
+                title: "ここで待ってるよ",
+                text: lastShareText
+              });
+              statusEl.innerHTML = "送信画面を開きました。";
+            } catch (e) {
+              statusEl.innerHTML = "送信をキャンセルしました。";
+            }
+          } else {
+            await copyText(lastShareText);
+          }
+        },
+        (err) => {
+          console.error(err);
+
+          if (location.protocol !== "https:" && location.hostname !== "localhost") {
+            statusEl.innerHTML = "位置情報を使うには<br>HTTPSで開いてください。";
+          } else {
+            statusEl.innerHTML = "現在地を取得できません。<br>スマホの位置情報をONにしてください。";
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    async function copyLastMessage() {
+      if (!lastShareText) {
+        statusEl.innerHTML = "先に青いボタンを<br>押してください。";
+        return;
+      }
+      await copyText(lastShareText);
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        statusEl.innerHTML = "文章をコピーしました。<br>LINEやメールに貼ってください。";
+      } catch (e) {
+        alert(text);
+        statusEl.innerHTML = "文章を表示しました。";
+      }
+    }
+  </script>
+</body>
+</html>
