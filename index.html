@@ -63,7 +63,7 @@
 
     .status {
       margin-top: 22px;
-      min-height: 70px;
+      min-height: 80px;
       font-size: 20px;
       font-weight: 800;
       line-height: 1.5;
@@ -115,7 +115,8 @@
 
     <div class="small">
       位置情報をONにしてください。<br>
-      LINEで送る場合は、共有画面でLINEを選んでください。
+      LINEで送る場合は、共有画面でLINEを選んでください。<br>
+      GitHub Pages / Vercel / BASEなど、HTTPSのページで開いてください。
     </div>
   </main>
 
@@ -129,7 +130,13 @@
         return;
       }
 
-      statusEl.innerHTML = "今いる場所を<br>確認しています…";
+      if (location.protocol !== "https:" && location.hostname !== "localhost") {
+        statusEl.innerHTML =
+          "位置情報を使うには<br>HTTPSで開く必要があります。<br>GitHub PagesやVercelで公開してください。";
+        return;
+      }
+
+      statusEl.innerHTML = "今いる場所を<br>確認しています…<br>少し待ってください";
 
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
@@ -139,7 +146,8 @@
           const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
 
           lastShareText =
-`ここで待っています。
+`ここで待っています😊
+
 この場所まで来てください。
 
 待ち合わせ場所：
@@ -166,15 +174,23 @@ GPSの誤差：約${accuracy}m`;
         (err) => {
           console.error(err);
 
-          if (location.protocol !== "https:" && location.hostname !== "localhost") {
-            statusEl.innerHTML = "位置情報を使うには<br>HTTPSで開いてください。";
+          let msg = "現在地を取得できませんでした。<br>";
+
+          if (err.code === 1) {
+            msg += "位置情報の許可がブロックされています。<br>ブラウザ設定で位置情報を許可してください。";
+          } else if (err.code === 2) {
+            msg += "GPSが現在地を見つけられません。<br>屋外や窓の近くで試してください。";
+          } else if (err.code === 3) {
+            msg += "取得に時間がかかっています。<br>もう一度ボタンを押してください。";
           } else {
-            statusEl.innerHTML = "現在地を取得できません。<br>スマホの位置情報をONにしてください。";
+            msg += "スマホの位置情報をONにしてください。";
           }
+
+          statusEl.innerHTML = msg;
         },
         {
           enableHighAccuracy: true,
-          timeout: 15000,
+          timeout: 30000,
           maximumAge: 0
         }
       );
